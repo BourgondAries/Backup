@@ -259,7 +259,7 @@ EOF
 	errs "$Yellow" "Loading the ACON parser\n"
 
 	acon=$(cat <<EOF
-## START ACON
+## BEGIN ACON
 	BEGIN { paths = 0; lists = 0; }
 	function printElements(start) { for (i = start; i <= NF; ++i) printf " %s", \$i; }
 	function isInArray() { return lists > 0 && topList() == paths; }
@@ -283,7 +283,9 @@ EOF
 )
 
 	aconf() {
+## BEGIN ACONF
 		awk -v pattern="$1" '$1 ~ pattern { for (i = 2; i <= NF; ++i) print $i;  }' | tr $'\n' ' ' | sed 's/ *$//g;s/^ *//g'
+##  END ACONF
 	}
 
 	errs "$Yellow" "Setting up server escaper\n"
