@@ -365,7 +365,8 @@ EOF
 		path="$(get_entry "$value" "path")"
 		from="$(get_entry "$value" "from")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
-		rsync -av $push $from "$address:$path"
+		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
+		rsync $push $from "$address:$path"
 	}
 
 	download() {
@@ -376,7 +377,8 @@ EOF
 		path="$(get_entry "$value" "path")"
 		from="$(get_entry "$value" "from")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
-		rsync -av $pull "$address:$path" .
+		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
+		rsync $pull "$address:$path" .
 	}
 
 	if ! onearg "$1" "--pull"; then
