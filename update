@@ -1,21 +1,19 @@
 #! /bin/bash -e
 
-# This script is divided into N sections
-# 0. Set functions logs, errs, and depend
-# 1. Check if we can print color, if we can, reset the logs function
+#######################################################################
+## What this program does:
+## 0. Set functions 'logs', 'errs', 'depend', 'run', and 'onearg'
+## 1. Check if colors are possible, if so, reset 'logs' and add color codes
+## 2. Check if various tools are available and set signal handling
+## 3. Process server list into an array
+## 4. Call 'clean' recursively
+## 5. Get the servers that will be used (via stdin)
+## 6. Perform actual up/down -loading
+## 7. Run 'contamine' recursively
+#######################################################################
 
 cat <<EOF
-#######################################################################
-#
-# What this script does:
-# 0. Set pretty printing (dependent on tty) (Also check necessary utils) - COLORS
-# 1. Check whether all necessary tools are available - TOOLCHECK
-# 2. Check and load the server list - SERVER LIST
-# 3. Call 'clean' recursively from the current working directory - CLEAN
-# 4. Query which servers to use - QUERY
-# 5. Upload/download - SYNC
-#
-#######################################################################
+	Arguments will be here soon...
 EOF
 
 #######################################################################
@@ -242,7 +240,7 @@ EOF
 
 fi
 #######################################################################
-# CLEAN
+# 4. Call 'clean' recursively
 #######################################################################
 if ! onearg "$1" "--contamine"; then
 
@@ -272,7 +270,7 @@ if ! onearg "$1" "--contamine"; then
 fi
 
 #######################################################################
-# QUERY
+# 5. Get the servers that will be used (via stdin)
 #######################################################################
 if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
 
@@ -307,7 +305,7 @@ if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
 
 fi
 #######################################################################
-# SYNC
+# 6. Perform actual up/down -loading
 #######################################################################
 if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
 
@@ -347,7 +345,7 @@ EOF
 fi
 
 #######################################################################
-# CONTAMINE
+# 7. Run 'contamine' recursively
 #######################################################################
 if ! onearg "$1" "--clean"; then
 
