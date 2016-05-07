@@ -33,9 +33,13 @@ Before `./update --push` uploads, it calls `clean` recursively. Usage: encryptin
 
 Perform cleaning without uploading with `./update --clean`
 
-## Extracting ##
+## Contaminating ##
 
 After `./update --pull` downloads, it calls `contamine` recursively. Usage: decrypt files, extract files, create temporaries.
 Contamine is the antonym of clean.
 
 Perform contamination without downloading with `./update --contamine`
+
+## Dependencies ##
+
+Dependencies are always checked. To explicitly check without running further use `./update --check`.
