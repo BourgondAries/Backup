@@ -19,7 +19,7 @@ depend() {
 	local lacking=0
 	for com in "$@"; do
 		if command -v "$com" >/dev/null 2>&1; then
-			logs "$Green" "Found program $com\n"
+			errs "$Green" "Found program $com\n"
 		else
 			lacking=1
 			errs "$Red" "This script requires ""$com"", but it's not installed.\n"
@@ -34,6 +34,7 @@ depend() {
 #######################################################################
 # COLORS
 #######################################################################
+errs "$Yellow" "Checking dependecies for printing color\n"
 depend printf sed tput
 
 colors=0
@@ -124,3 +125,9 @@ On_ICyan=$'\e[0;106m'    # Cyan
 On_IWhite=$'\e[0;107m'   # White
 
 #######################################################################
+# TOOLCHECK
+#######################################################################
+errs "$Yellow" "Checking dependencies for processing the server list\n"
+depend awk cat cd declare find grep read rsync pwd trap xargs
+
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
