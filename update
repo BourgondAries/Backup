@@ -1,5 +1,9 @@
 #! /bin/bash -e
 
+# This script is divided into N sections
+# 0. Set functions logs, errs, and depend
+# 1. Check if we can print color, if we can, reset the logs function
+
 cat <<EOF
 #######################################################################
 #
@@ -14,10 +18,14 @@ cat <<EOF
 #######################################################################
 EOF
 
-logs() { printf "$2"; }
-errs() { logs "$@" >&2; }
+#######################################################################
+# 0. Set functions 'logs', 'errs', 'depend', 'run', and 'onearg'
+#######################################################################
 
-depend() {
+logs() { printf "$2"; }  # Log to stdout
+errs() { logs "$@" >&2; }  # Log to stderr
+
+depend() {  # Check dependencies
 	local lacking=0
 	for com in "$@"; do
 		if command -v "$com" >/dev/null 2>&1; then
@@ -33,196 +41,7 @@ depend() {
 	fi
 }
 
-#######################################################################
-# COLORS
-#######################################################################
-errs "$Yellow" "Checking dependecies for printing color\n"
-depend printf sed tput
-
-colors=0
-if test -t 1 && [ "$(tput colors)" -ge 8 ]; then
-	colors=1
-fi
-
-logs() {
-	if [ "$colors" -eq 1 ]; then
-		printf "$(printf '%s' "$2" | sed "s/^/$1/g" | sed "s/\$/${Color_Off}/g")"
-	else
-		printf "$(printf '%s' "$2")"
-	fi
-}
-errs() { logs "$@" >&2; }
-
-# Reset
-Color_Off=$'\e[0m'       # Text Reset
-
-# Regular Colors
-Black=$'\e[0;30m'        # Black
-Red=$'\e[0;31m'          # Red
-Green=$'\e[0;32m'        # Green
-Yellow=$'\e[0;33m'       # Yellow
-Blue=$'\e[0;34m'         # Blue
-Purple=$'\e[0;35m'       # Purple
-Cyan=$'\e[0;36m'         # Cyan
-White=$'\e[0;37m'        # White
-
-# Bold
-BBlack=$'\e[1;30m'       # Black
-BRed=$'\e[1;31m'         # Red
-BGreen=$'\e[1;32m'       # Green
-BYellow=$'\e[1;33m'      # Yellow
-BBlue=$'\e[1;34m'        # Blue
-BPurple=$'\e[1;35m'      # Purple
-BCyan=$'\e[1;36m'        # Cyan
-BWhite=$'\e[1;37m'       # White
-
-# Underline
-UBlack=$'\e[4;30m'       # Black
-URed=$'\e[4;31m'         # Red
-UGreen=$'\e[4;32m'       # Green
-UYellow=$'\e[4;33m'      # Yellow
-UBlue=$'\e[4;34m'        # Blue
-UPurple=$'\e[4;35m'      # Purple
-UCyan=$'\e[4;36m'        # Cyan
-UWhite=$'\e[4;37m'       # White
-
-# Background
-On_Black=$'\e[40m'       # Black
-On_Red=$'\e[41m'         # Red
-On_Green=$'\e[42m'       # Green
-On_Yellow=$'\e[43m'      # Yellow
-On_Blue=$'\e[44m'        # Blue
-On_Purple=$'\e[45m'      # Purple
-On_Cyan=$'\e[46m'        # Cyan
-On_White=$'\e[47m'       # White
-
-# High Intensity
-IBlack=$'\e[0;90m'       # Black
-IRed=$'\e[0;91m'         # Red
-IGreen=$'\e[0;92m'       # Green
-IYellow=$'\e[0;93m'      # Yellow
-IBlue=$'\e[0;94m'        # Blue
-IPurple=$'\e[0;95m'      # Purple
-ICyan=$'\e[0;96m'        # Cyan
-IWhite=$'\e[0;97m'       # White
-
-# Bold High Intensity
-BIBlack=$'\e[1;90m'      # Black
-BIRed=$'\e[1;91m'        # Red
-BIGreen=$'\e[1;92m'      # Green
-BIYellow=$'\e[1;93m'     # Yellow
-BIBlue=$'\e[1;94m'       # Blue
-BIPurple=$'\e[1;95m'     # Purple
-BICyan=$'\e[1;96m'       # Cyan
-BIWhite=$'\e[1;97m'      # White
-
-# High Intensity backgrounds
-On_IBlack=$'\e[0;100m'   # Black
-On_IRed=$'\e[0;101m'     # Red
-On_IGreen=$'\e[0;102m'   # Green
-On_IYellow=$'\e[0;103m'  # Yellow
-On_IBlue=$'\e[0;104m'    # Blue
-On_IPurple=$'\e[0;105m'  # Purple
-On_ICyan=$'\e[0;106m'    # Cyan
-On_IWhite=$'\e[0;107m'   # White
-
-#######################################################################
-# TOOLCHECK
-#######################################################################
-errs "$Yellow" "Checking dependencies for processing the server list\n"
-depend awk cat cd declare find grep read rsync pwd trap xargs
-
-trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
-
-#######################################################################
-# SERVER LIST
-#######################################################################
-if [ -f backup-servers ]; then
-	errs "$Green" "Located backup server list at $(pwd)/backup-servers\n"
-else
-	errs "$Red" "$(pwd)/backup-servers does not exist! Creating an example\n"
-	cat <<EOF > backup-servers
-# Example backup server file
-# The address is provided to rsync
-# The push and pull variables denote what happens when you either push or pull
-# All of these are rsync flags
-# path specifies which directories and/or files to up/down -load
-# A star can be used here to denote every file
-# All paths are from the current working directory, but can also be absolute
-
-{ onside-backup
-	address 192.168.1.1
-	push -P --delete --timeout=10
-	pull -P --delete --timeout=30
-	path ./folder1
-	# Dot means everything
-	from .
-}
-{ offsite-backup
-	address username@server
-	push -P --timeout=10
-	pull --timeout=10
-	path ./
-	from file1 folder1
-}
-EOF
-	exit 1
-fi
-
-errs "$Yellow" "Loading the ACON parser\n"
-
-acon=$(cat <<EOF
-BEGIN { paths = 0; lists = 0; }
-function printElements(start) { for (i = start; i <= NF; ++i) printf " %s", \$i; }
-function isInArray() { return lists > 0 && topList() == paths; }
-function printPath() { for (i = 0; i < paths - 1; ++i) if (path[i] != "") { printf "%s.", path[i]; } if (paths > 0 && path[paths - 1] != "") printf "%s", path[paths - 1]; }
-function pushPath(argument) { path[paths] = argument; ++paths; }
-function popPath() { if (paths <= 0) { printf "Can not pop path, already empty" | "cat 1>&2"; exit 1; } else { --paths; return path[paths]; }}
-function pushList(argument) { list[lists] = argument; ++lists; }
-function popList() { if (lists <= 0) { printf "Can not pop list, already empty" | "cat 1>&2"; exit 1; } else { --lists; return list[lists]; }}
-function topList() { if (lists <= 0) { printf "Can not get top element, list is empty" | "cat 1>&2"; exit 1; } else { return list[lists - 1]; }}
-function incrementIfInList() { if (lists > 0 && paths == list[lists - 1]) ++path[paths - 1]; }
-function isNamed() { if (paths == 0 || path[paths - 1] == "") return ""; else return "."; }
-function printUnitTitle() { if (lists <= 0 || lists > 0 && isInArray() == 0) { if (\$1 != "") printf "%s%s", isNamed(), \$1; } }
-\$1 ~ /#/ { next; }
-\$1 ~ /{/ { pushPath(\$2); next; }
-\$1 ~ /}/ { popPath(); incrementIfInList(); next; }
-\$1 ~ /\[/ { pushPath(\$2); pushPath(0); pushList(paths); next; }
-\$1 ~ /\]/ { popPath(); popPath(); popList(); incrementIfInList(); next; }
-// { if (NF == 0) { if (isInArray()) { printPath(); incrementIfInList(); printf "\n";} next; } else { printPath(); printUnitTitle(); printElements((isInArray() == 0) + 1); printf "\n"; incrementIfInList(); } }
-EOF
-)
-
-errs "$Yellow" "Setting up server escaper\n"
-escape() { sed 's/(32)/ /g' | sed 's/(10)/\\n/g'; }
-
-errs "$Yellow" "Processing the backup-servers\n"
-servers="$(cat backup-servers | awk "$acon")"
-names="$(echo "$servers" | awk -F'.' '{ print $1; }' | uniq)"
-raw_list=()
-list=()
-while read line; do
-	list+=("$(echo $line | escape)")
-	raw_list+=("$line")
-	errs "$Green" "Loaded server '$(echo $line | escape)'\n"
-done < <(echo "$names")
-if [ "${#list[@]}" -eq 0 ]; then
-	errs "$Red" "Server list is empty. Delete the backup-servers file to let this script generate one for you. Aborting\n"
-	exit 1
-fi
-
-errs "$Yellow" 'Checking internal consistency\n'
-if [ "${#list[@]}" -ne "${#raw_list[@]}" ]; then
-	errs "$Red" 'Internal Error: The escaped list and names are not of the same size.\n'
-	exit 1
-fi
-
-#######################################################################
-# CLEAN
-#######################################################################
-errs "$Yellow" "Running clean recursively...\n"
-
-run() {
+run() {  # Run a script in its native folder
 	cd ${1%/*}
 	local prepper="$(echo $1 | sed 's/\//\\\//g')"
 	output="$(bash ${1##*/})"
@@ -235,53 +54,246 @@ run() {
 	fi
 }
 
-fail=0
-while read -r -d $'\0' clean; do
-	root="$(pwd)"
-	errs "$Yellow" "running '$clean'\n"
-	if run "$clean"; then
-		errs "$Green" "Cleaning script '$clean' succeeded\n"
+onearg() {  # Compare two arguments
+	if [ "$1" = "$2" ]; then
+		return 0
 	else
-		errs "$Red" "Cleaning script '$clean' failed\n"
-		: $((++fail))
+		return 1
 	fi
-	cd "$root"
-done < <(find -name clean -perm -u=x -type f -print0)
+}
 
-if [ "$fail" -ge 1 ]; then
-	wording=('scripts' 'these')
-	if [ "$fail" -eq 1 ]; then
-		wording=('script' 'it')
+#######################################################################
+# 1. Check if colors are possible, if so, reset 'logs' and add color codes
+#######################################################################
+errs "$Yellow" "Checking dependecies for printing color\n"
+depend printf sed tput
+
+if test -t 1 && [ "$(tput colors)" -ge 8 ]; then
+
+	logs() { printf "$(printf '%s' "$2" | sed "s/^/$1/g" | sed "s/\$/${Color_Off}/g")"; }  # Log to stdout, use color coding
+
+	# Reset
+	Color_Off=$'\e[0m'       # Text Reset
+
+	# Regular Colors
+	Black=$'\e[0;30m'        # Black
+	Red=$'\e[0;31m'          # Red
+	Green=$'\e[0;32m'        # Green
+	Yellow=$'\e[0;33m'       # Yellow
+	Blue=$'\e[0;34m'         # Blue
+	Purple=$'\e[0;35m'       # Purple
+	Cyan=$'\e[0;36m'         # Cyan
+	White=$'\e[0;37m'        # White
+
+	# Bold
+	BBlack=$'\e[1;30m'       # Black
+	BRed=$'\e[1;31m'         # Red
+	BGreen=$'\e[1;32m'       # Green
+	BYellow=$'\e[1;33m'      # Yellow
+	BBlue=$'\e[1;34m'        # Blue
+	BPurple=$'\e[1;35m'      # Purple
+	BCyan=$'\e[1;36m'        # Cyan
+	BWhite=$'\e[1;37m'       # White
+
+	# Underline
+	UBlack=$'\e[4;30m'       # Black
+	URed=$'\e[4;31m'         # Red
+	UGreen=$'\e[4;32m'       # Green
+	UYellow=$'\e[4;33m'      # Yellow
+	UBlue=$'\e[4;34m'        # Blue
+	UPurple=$'\e[4;35m'      # Purple
+	UCyan=$'\e[4;36m'        # Cyan
+	UWhite=$'\e[4;37m'       # White
+
+	# Background
+	On_Black=$'\e[40m'       # Black
+	On_Red=$'\e[41m'         # Red
+	On_Green=$'\e[42m'       # Green
+	On_Yellow=$'\e[43m'      # Yellow
+	On_Blue=$'\e[44m'        # Blue
+	On_Purple=$'\e[45m'      # Purple
+	On_Cyan=$'\e[46m'        # Cyan
+	On_White=$'\e[47m'       # White
+
+	# High Intensity
+	IBlack=$'\e[0;90m'       # Black
+	IRed=$'\e[0;91m'         # Red
+	IGreen=$'\e[0;92m'       # Green
+	IYellow=$'\e[0;93m'      # Yellow
+	IBlue=$'\e[0;94m'        # Blue
+	IPurple=$'\e[0;95m'      # Purple
+	ICyan=$'\e[0;96m'        # Cyan
+	IWhite=$'\e[0;97m'       # White
+
+	# Bold High Intensity
+	BIBlack=$'\e[1;90m'      # Black
+	BIRed=$'\e[1;91m'        # Red
+	BIGreen=$'\e[1;92m'      # Green
+	BIYellow=$'\e[1;93m'     # Yellow
+	BIBlue=$'\e[1;94m'       # Blue
+	BIPurple=$'\e[1;95m'     # Purple
+	BICyan=$'\e[1;96m'       # Cyan
+	BIWhite=$'\e[1;97m'      # White
+
+	# High Intensity backgrounds
+	On_IBlack=$'\e[0;100m'   # Black
+	On_IRed=$'\e[0;101m'     # Red
+	On_IGreen=$'\e[0;102m'   # Green
+	On_IYellow=$'\e[0;103m'  # Yellow
+	On_IBlue=$'\e[0;104m'    # Blue
+	On_IPurple=$'\e[0;105m'  # Purple
+	On_ICyan=$'\e[0;106m'    # Cyan
+	On_IWhite=$'\e[0;107m'   # White
+
+fi
+
+#######################################################################
+# 2. Check if various tools are available and set signal handling
+#######################################################################
+errs "$Yellow" "Checking dependencies for processing the server list\n"
+depend awk cat cd declare find grep read rsync pwd trap xargs
+
+errs "$Yellow" "Setting kill condition\n"
+trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+
+#######################################################################
+# 3. Process server list into an array
+#######################################################################
+if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
+	if [ -f backup-servers ]; then
+		errs "$Green" "Located backup server list at $(pwd)/backup-servers\n"
+	else
+		errs "$Red" "$(pwd)/backup-servers does not exist! Creating an example\n"
+		cat <<EOF > backup-servers
+	# Example backup server file
+	# The address is provided to rsync
+	# The push and pull variables denote what happens when you either push or pull
+	# All of these are rsync flags
+	# path specifies which directories and/or files to up/down -load
+	# A star can be used here to denote every file
+	# All paths are from the current working directory, but can also be absolute
+
+	{ onside-backup
+		address 192.168.1.1
+		push -P --delete --timeout=10
+		pull -P --delete --timeout=30
+		path ./folder1
+		# Dot means everything
+		from .
+	}
+	{ offsite-backup
+		address username@server
+		push -P --timeout=10
+		pull --timeout=10
+		path ./
+		from file1 folder1
+	}
+EOF
+		exit 1
 	fi
-	errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+
+	errs "$Yellow" "Loading the ACON parser\n"
+
+	acon=$(cat <<EOF
+	BEGIN { paths = 0; lists = 0; }
+	function printElements(start) { for (i = start; i <= NF; ++i) printf " %s", \$i; }
+	function isInArray() { return lists > 0 && topList() == paths; }
+	function printPath() { for (i = 0; i < paths - 1; ++i) if (path[i] != "") { printf "%s.", path[i]; } if (paths > 0 && path[paths - 1] != "") printf "%s", path[paths - 1]; }
+	function pushPath(argument) { path[paths] = argument; ++paths; }
+	function popPath() { if (paths <= 0) { printf "Can not pop path, already empty" | "cat 1>&2"; exit 1; } else { --paths; return path[paths]; }}
+	function pushList(argument) { list[lists] = argument; ++lists; }
+	function popList() { if (lists <= 0) { printf "Can not pop list, already empty" | "cat 1>&2"; exit 1; } else { --lists; return list[lists]; }}
+	function topList() { if (lists <= 0) { printf "Can not get top element, list is empty" | "cat 1>&2"; exit 1; } else { return list[lists - 1]; }}
+	function incrementIfInList() { if (lists > 0 && paths == list[lists - 1]) ++path[paths - 1]; }
+	function isNamed() { if (paths == 0 || path[paths - 1] == "") return ""; else return "."; }
+	function printUnitTitle() { if (lists <= 0 || lists > 0 && isInArray() == 0) { if (\$1 != "") printf "%s%s", isNamed(), \$1; } }
+	\$1 ~ /#/ { next; }
+	\$1 ~ /{/ { pushPath(\$2); next; }
+	\$1 ~ /}/ { popPath(); incrementIfInList(); next; }
+	\$1 ~ /\[/ { pushPath(\$2); pushPath(0); pushList(paths); next; }
+	\$1 ~ /\]/ { popPath(); popPath(); popList(); incrementIfInList(); next; }
+	// { if (NF == 0) { if (isInArray()) { printPath(); incrementIfInList(); printf "\n";} next; } else { printPath(); printUnitTitle(); printElements((isInArray() == 0) + 1); printf "\n"; incrementIfInList(); } }
+EOF
+)
+
+	errs "$Yellow" "Setting up server escaper\n"
+	escape() { sed 's/(32)/ /g' | sed 's/(10)/\\n/g'; }
+
+	errs "$Yellow" "Processing the backup-servers\n"
+	servers="$(cat backup-servers | awk "$acon")"
+	names="$(echo "$servers" | awk -F'.' '{ print $1; }' | uniq)"
+	raw_list=()
+	list=()
+	while read line; do
+		list+=("$(echo $line | escape)")
+		raw_list+=("$line")
+		errs "$Green" "Loaded server '$(echo $line | escape)'\n"
+	done < <(echo "$names")
+	if [ "${#list[@]}" -eq 0 ]; then
+		errs "$Red" "Server list is empty. Delete the backup-servers file to let this script generate one for you. Aborting\n"
+		exit 1
+	fi
+
+	errs "$Yellow" 'Checking internal consistency\n'
+	if [ "${#list[@]}" -ne "${#raw_list[@]}" ]; then
+		errs "$Red" 'Internal Error: The escaped list and names are not of the same size.\n'
+		exit 1
+	fi
+
+fi
+#######################################################################
+# CLEAN
+#######################################################################
+if ! onearg "$1" "--contamine"; then
+
+	errs "$Yellow" "Running clean recursively...\n"
+
+	fail=0
+	while read -r -d $'\0' clean; do
+		root="$(pwd)"
+		errs "$Yellow" "running '$clean'\n"
+		if run "$clean"; then
+			errs "$Green" "Cleaning script '$clean' succeeded\n"
+		else
+			errs "$Red" "Cleaning script '$clean' failed\n"
+			: $((++fail))
+		fi
+		cd "$root"
+	done < <(find -name clean -perm -u=x -type f -print0)
+
+	if [ "$fail" -ge 1 ]; then
+		wording=('scripts' 'these')
+		if [ "$fail" -eq 1 ]; then
+			wording=('script' 'it')
+		fi
+		errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+	fi
+
 fi
 
 #######################################################################
 # QUERY
 #######################################################################
-errs "$Yellow" "Finding largest server name\n"
-index=0
-largest=0
-while [ "$index" -lt "${#list[@]}" ]; do
-	size="${#list[$index]}"
-	if [ "$largest" -lt "$size" ]; then
-		largest="$size"
-	fi
-	: $((++index))
-done
+if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
 
-padding() {
-	local insize="${#1}"
-	local difference="$(($largest-$insize))"
-	v="$(printf "%-${difference}s" "")"
-	echo "${v// / }"
-}
+	errs "$Yellow" "Finding largest server name\n"
+	index=0
+	largest=0
+	while [ "$index" -lt "${#list[@]}" ]; do
+		size="${#list[$index]}"
+		if [ "$largest" -lt "$size" ]; then
+			largest="$size"
+		fi
+		: $((++index))
+	done
 
-if [ "$#" -gt 0 ] || ! [ -t 1 ]; then
-	# Direct mode
-	:
-else
-	# Interactive mode
+	padding() {
+		local insize="${#1}"
+		local difference="$(($largest-$insize))"
+		v="$(printf "%-${difference}s" "")"
+		echo "${v// / }"
+	}
+
 	errs "$Yellow" "Listing servers\n"
 	index=0
 	logs "$IBlue" 'All: (blank input)\n'
@@ -292,40 +304,72 @@ else
 	done
 	logs "" "Enter server name (separate multiple servers by spaces): "
 	read -a servers
-fi
 
+fi
 #######################################################################
 # SYNC
 #######################################################################
-errs "$Yellow" "Preparing upload facilities\n"
-all_but_last="$(cat <<EOF
-// { for (i = 2; i <= NF; ++i) print \$i; }
+if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
+
+	errs "$Yellow" "Preparing upload facilities\n"
+	all_but_last="$(cat <<EOF
+	// { for (i = 2; i <= NF; ++i) print \$i; }
 EOF
 )"
 
-get_entry() {
-	echo "$1" | awk -F'.' "\$2 ~ /$2/ { print; }" | awk "$all_but_last" | tr $'\n' ' ' | sed 's/ *$//g'
-}
+	get_entry() {
+		echo "$1" | awk -F'.' "\$2 ~ /$2/ { print; }" | awk "$all_but_last" | tr $'\n' ' ' | sed 's/ *$//g'
+	}
 
-upload() {
-	server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
-	value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
-	address="$(get_entry "$value" "address")"
-	push="$(get_entry "$value" "push")"
-	pull="$(get_entry "$value" "pull")"
-	path="$(get_entry "$value" "path")"
-	from="$(get_entry "$value" "from")"
-	errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
-	rsync -av $push $from "$address:$path"
-}
+	upload() {
+		server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
+		value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		address="$(get_entry "$value" "address")"
+		push="$(get_entry "$value" "push")"
+		pull="$(get_entry "$value" "pull")"
+		path="$(get_entry "$value" "path")"
+		from="$(get_entry "$value" "from")"
+		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
+		rsync -av $push $from "$address:$path"
+	}
 
-errs "$Yellow" "Processing servers\n"
-if [ "${#servers[@]}" -eq 0 ]; then
-	for server in "${raw_list[@]}"; do
-		upload "$server"
-	done
-else
-	for server in "${servers[@]}"; do
-		upload "$server"
-	done
+	errs "$Yellow" "Processing servers\n"
+	if [ "${#servers[@]}" -eq 0 ]; then
+		for server in "${raw_list[@]}"; do
+			upload "$server"
+		done
+	else
+		for server in "${servers[@]}"; do
+			upload "$server"
+		done
+	fi
+
+fi
+
+#######################################################################
+# CONTAMINE
+#######################################################################
+if ! onearg "$1" "--clean"; then
+
+	fail=0
+	while read -r -d $'\0' clean; do
+		root="$(pwd)"
+		errs "$Yellow" "running '$clean'\n"
+		if run "$clean"; then
+			errs "$Green" "Contamine script '$clean' succeeded\n"
+		else
+			errs "$Red" "Contamine script '$clean' failed\n"
+			: $((++fail))
+		fi
+		cd "$root"
+	done < <(find -name contamine -perm -u=x -type f -print0)
+
+	if [ "$fail" -ge 1 ]; then
+		wording=('scripts' 'these')
+		if [ "$fail" -eq 1 ]; then
+			wording=('script' 'it')
+		fi
+		errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+	fi
+
 fi
