@@ -63,7 +63,7 @@ if [ "$1" = "--push" ] || [ "$1" = "--pull" ] || [ "$1" = "--" ]; then
 fi
 
 #######################################################################
-# 0. Set functions 'logs', 'errs', 'depend', 'run', 'onearg', and 'escape'
+# 0. Set functions 'logs', 'errs', 'depend', 'run', 'onearg', 'escape', and 'escape_all'
 #######################################################################
 
 logs() { printf "$2"; }  # Log to stdout
@@ -88,12 +88,13 @@ depend() {  # Check dependencies
 run() {  # Run a script in its native folder
 	cd ${1%/*}
 	local prepper="$(echo $1 | sed 's/\//\\\//g')"
-	local output="$(bash ${1##*/})"
-	local code="$?"
+	local output="$(bash "${1##*/}")" RET="$?"
+	local code="$RET"
 	if [ "${#output}" -gt 0 ]; then
 		errs "$Cyan" "$(echo "$output" |& sed "s/^/$prepper: /g")\n"
 	fi
 	if [ "$code" -ne 0 ]; then
+		echo "returning 1"
 		return 1
 	fi
 }
