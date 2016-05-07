@@ -255,3 +255,41 @@ if [ "$fail" -ge 1 ]; then
 	fi
 	errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
 fi
+
+#######################################################################
+# QUERY
+#######################################################################
+errs "$Yellow" "Finding largest server name\n"
+index=0
+largest=0
+while [ "$index" -lt "${#list[@]}" ]; do
+	size="${#list[$index]}"
+	if [ "$largest" -lt "$size" ]; then
+		largest="$size"
+	fi
+	: $((++index))
+done
+
+padding() {
+	local insize="${#1}"
+	local difference="$(($largest-$insize))"
+	v="$(printf "%-${difference}s" "")"
+	echo "${v// / }"
+}
+
+if [ "$#" -gt 0 ] || ! [ -t 1 ]; then
+	# Direct mode
+	:
+else
+	# Interactive mode
+	errs "$Yellow" "Listing servers\n"
+	index=0
+	logs "$IBlue" 'All: (blank input)\n'
+	while [ "$index" -lt "${#list[@]}" ]; do
+		spaces="$(padding "${list[$index]}")"
+		logs "$Blue" "${list[$index]}:$spaces '${raw_list[$index]}'\n"
+		: $((++index))
+	done
+	logs "" "Enter server name (separate multiple servers by spaces): "
+	read -a servers
+fi
