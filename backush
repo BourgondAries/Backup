@@ -14,7 +14,7 @@
 
 version() {
 	cat <<EOF
-backush (BacKush) version 0.1.0
+backush (BacKush) version 0.2.0
 Copyright (C) 2016 Kevin Robert Stravers
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
@@ -195,7 +195,7 @@ fi
 # 2. Check if various tools are available and set signal handling
 #######################################################################
 errs "$Yellow" "Checking dependencies for processing the server list\n"
-depend awk cat cd declare find grep read rsync pwd trap xargs
+depend awk cat cd declare find grep read rsync pwd ssh trap xargs
 
 if [ "$1" = "--check" ]; then
 	errs "$Green" "All dependencies were found\n"
@@ -369,7 +369,7 @@ EOF
 )"
 
 	get_entry() {
-		echo "$1" | awk -F'.' "\$2 ~ /$2/ { print; }" | awk "$all_but_last" | tr $'\n' ' ' | sed 's/ *$//g'
+		echo "$1" | awk -F'[. ]' "\$2 ~ /$2/ { print; }" | awk "$all_but_last" | tr $'\n' ' ' | sed 's/ *$//g'
 	}
 
 	upload() {
@@ -383,9 +383,13 @@ EOF
 		local push="$(get_entry "$value" "push")"
 		local path="$(get_entry "$value" "path")"
 		local from="$(get_entry "$value" "from")"
+		local execute="$(get_entry "$value" "execute")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
 		rsync $push $from "$address:$path"
+		if [ "$execute" != "" ]; then
+			ssh "$address" <<< "$execute"
+		fi
 	}
 
 	download() {
@@ -399,9 +403,13 @@ EOF
 		local pull="$(get_entry "$value" "pull")"
 		local path="$(get_entry "$value" "path")"
 		local from="$(get_entry "$value" "from")"
+		local execute="$(get_entry "$value" "execute")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
 		rsync $pull "$address:$path" .
+		if [ "$execute" != "" ]; then
+			bash -c "$execute"
+		fi
 	}
 
 	if ! onearg "$1" "--pull"; then
