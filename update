@@ -293,3 +293,39 @@ else
 	logs "" "Enter server name (separate multiple servers by spaces): "
 	read -a servers
 fi
+
+#######################################################################
+# SYNC
+#######################################################################
+errs "$Yellow" "Preparing upload facilities\n"
+all_but_last="$(cat <<EOF
+// { for (i = 2; i <= NF; ++i) print \$i; }
+EOF
+)"
+
+get_entry() {
+	echo "$1" | awk -F'.' "\$2 ~ /$2/ { print; }" | awk "$all_but_last" | tr $'\n' ' ' | sed 's/ *$//g'
+}
+
+upload() {
+	server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
+	value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+	address="$(get_entry "$value" "address")"
+	push="$(get_entry "$value" "push")"
+	pull="$(get_entry "$value" "pull")"
+	path="$(get_entry "$value" "path")"
+	from="$(get_entry "$value" "from")"
+	errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
+	rsync -av $push $from "$address:$path"
+}
+
+errs "$Yellow" "Processing servers\n"
+if [ "${#servers[@]}" -eq 0 ]; then
+	for server in "${raw_list[@]}"; do
+		upload "$server"
+	done
+else
+	for server in "${servers[@]}"; do
+		upload "$server"
+	done
+fi
