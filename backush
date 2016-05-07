@@ -14,7 +14,7 @@
 
 version() {
 	cat <<EOF
-backush (BacKush) version 0.4.1
+backush (BacKush) version 0.4.2
 Copyright (C) 2016 Kevin Robert Stravers
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
@@ -305,7 +305,7 @@ EOF
 
 	aconf() {
 ## BEGIN ACONF
-		awk -v pattern="$1" '$1 ~ pattern { for (i = 2; i <= NF; ++i) print $i;  }' | tr $'\n' ' ' | sed 's/ *$//g;s/^ *//g'
+		awk -v pattern="$1" '$1 ~ pattern { for (i = 2; i <= NF; ++i) printf "%s ", $i; printf "\n";  }' | sed 's/ *$//g;s/^ *//g'
 ## END ACONF
 	}
 
