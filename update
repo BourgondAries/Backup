@@ -195,7 +195,7 @@ if [ "$1" = "--check" ]; then
 fi
 
 errs "$Yellow" "Setting kill condition\n"
-trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+# trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 
 #######################################################################
 # 3. Process server list into an array
@@ -366,15 +366,15 @@ EOF
 
 	upload() {
 		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
-		value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
 		if [ "$value" = "" ]; then
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
 		fi
-		address="$(get_entry "$value" "address")"
-		push="$(get_entry "$value" "push")"
-		path="$(get_entry "$value" "path")"
-		from="$(get_entry "$value" "from")"
+		local address="$(get_entry "$value" "address")"
+		local push="$(get_entry "$value" "push")"
+		local path="$(get_entry "$value" "path")"
+		local from="$(get_entry "$value" "from")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
 		rsync $push $from "$address:$path"
@@ -382,15 +382,15 @@ EOF
 
 	download() {
 		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
-		value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
 		if [ "$value" = "" ]; then
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
 		fi
-		address="$(get_entry "$value" "address")"
-		pull="$(get_entry "$value" "pull")"
-		path="$(get_entry "$value" "path")"
-		from="$(get_entry "$value" "from")"
+		local address="$(get_entry "$value" "address")"
+		local pull="$(get_entry "$value" "pull")"
+		local path="$(get_entry "$value" "path")"
+		local from="$(get_entry "$value" "from")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
 		rsync $pull "$address:$path" .
