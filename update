@@ -365,8 +365,12 @@ EOF
 	}
 
 	upload() {
-		server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
+		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
 		value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		if [ "$value" = "" ]; then
+			errs "$Red" "Server '$server' not found. Aborting\n"
+			exit 1
+		fi
 		address="$(get_entry "$value" "address")"
 		push="$(get_entry "$value" "push")"
 		path="$(get_entry "$value" "path")"
@@ -377,8 +381,12 @@ EOF
 	}
 
 	download() {
-		server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
+		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
 		value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		if [ "$value" = "" ]; then
+			errs "$Red" "Server '$server' not found. Aborting\n"
+			exit 1
+		fi
 		address="$(get_entry "$value" "address")"
 		pull="$(get_entry "$value" "pull")"
 		path="$(get_entry "$value" "path")"
