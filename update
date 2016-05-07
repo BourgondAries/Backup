@@ -15,6 +15,7 @@
 version() {
 	echo "0.1.0-draft"
 }
+
 usage() {
 	version
 	local program=update
@@ -33,7 +34,7 @@ Usage:
 	$program --help
 		Show this message.
 	$program --check
-		Check if all necessary dependencies are installed.
+		Only check if all necessary dependencies are installed.
 EOF
 }
 
@@ -180,6 +181,11 @@ fi
 #######################################################################
 errs "$Yellow" "Checking dependencies for processing the server list\n"
 depend awk cat cd declare find grep read rsync pwd trap xargs
+
+if [ "$1" = "--check" ]; then
+	errs "$Green" "All dependencies were found\n"
+	exit
+fi
 
 errs "$Yellow" "Setting kill condition\n"
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
