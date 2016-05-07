@@ -131,3 +131,74 @@ errs "$Yellow" "Checking dependencies for processing the server list\n"
 depend awk cat cd declare find grep read rsync pwd trap xargs
 
 trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
+
+#######################################################################
+# SERVER LIST
+#######################################################################
+if [ -f backup-servers ]; then
+	errs "$Green" "Located backup server list at $(pwd)/backup-servers\n"
+else
+	errs "$Red" "$(pwd)/backup-servers does not exist! Creating an example\n"
+	cat <<EOF > backup-servers
+# Example backup server file
+# The address is provided to rsync
+# The push and pull variables denote what happens when you either push or pull
+# All of these are rsync flags
+# path specifies which directories and/or files to up/down -load
+# A star can be used here to denote every file
+# All paths are from the current working directory, but can also be absolute
+
+{ onside-backup
+	address 192.168.1.1
+	push -P --delete --timeout=10
+	pull -P --delete --timeout=30
+	path folder1 folder2 item1 item2
+}
+{ offsite-backup
+	address username@server
+	push -P --timeout=10
+	pull --timeout=10
+	path folder1 item1
+}
+EOF
+fi
+
+errs "$Yellow" "Loading the ACON parser\n"
+
+acon=$(cat <<EOF
+BEGIN { paths = 0; lists = 0; }
+function printElements(start) { for (i = start; i <= NF; ++i) printf " %s", \$i; }
+function isInArray() { return lists > 0 && topList() == paths; }
+function printPath() { for (i = 0; i < paths - 1; ++i) if (path[i] != "") { printf "%s.", path[i]; } if (paths > 0 && path[paths - 1] != "") printf "%s", path[paths - 1]; }
+function pushPath(argument) { path[paths] = argument; ++paths; }
+function popPath() { if (paths <= 0) { printf "Can not pop path, already empty" | "cat 1>&2"; exit 1; } else { --paths; return path[paths]; }}
+function pushList(argument) { list[lists] = argument; ++lists; }
+function popList() { if (lists <= 0) { printf "Can not pop list, already empty" | "cat 1>&2"; exit 1; } else { --lists; return list[lists]; }}
+function topList() { if (lists <= 0) { printf "Can not get top element, list is empty" | "cat 1>&2"; exit 1; } else { return list[lists - 1]; }}
+function incrementIfInList() { if (lists > 0 && paths == list[lists - 1]) ++path[paths - 1]; }
+function isNamed() { if (paths == 0 || path[paths - 1] == "") return ""; else return "."; }
+function printUnitTitle() { if (lists <= 0 || lists > 0 && isInArray() == 0) { if (\$1 != "") printf "%s%s", isNamed(), \$1; } }
+\$1 ~ /#/ { next; }
+\$1 ~ /{/ { pushPath(\$2); next; }
+\$1 ~ /}/ { popPath(); incrementIfInList(); next; }
+\$1 ~ /\[/ { pushPath(\$2); pushPath(0); pushList(paths); next; }
+\$1 ~ /\]/ { popPath(); popPath(); popList(); incrementIfInList(); next; }
+// { if (NF == 0) { if (isInArray()) { printPath(); incrementIfInList(); printf "\n";} next; } else { printPath(); printUnitTitle(); printElements((isInArray() == 0) + 1); printf "\n"; incrementIfInList(); } }
+EOF
+)
+
+errs "$Yellow" "Setting up server escaper\n"
+escape() { sed 's/(32)/ /g' | sed 's/(10)/\\n/g'; }
+
+errs "$Yellow" "Processing the backup-servers\n"
+servers="$(cat backup-servers | awk "$acon")"
+names="$(echo "$servers" | awk -F'.' '{ print $1; }' | uniq)"
+list=()
+while read line; do
+	list+=("$line")
+	errs "$Green" "Loaded server '$(echo $line | escape)'\n"
+done < <(echo "$names")
+if [ "${#list[@]}" -eq 0 ]; then
+	errs "$Red" "Server list is empty. Delete the backup-servers file to let this script generate one for you. Aborting\n"
+	exit 1
+fi
