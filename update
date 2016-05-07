@@ -202,3 +202,42 @@ if [ "${#list[@]}" -eq 0 ]; then
 	errs "$Red" "Server list is empty. Delete the backup-servers file to let this script generate one for you. Aborting\n"
 	exit 1
 fi
+
+#######################################################################
+# CLEAN
+#######################################################################
+errs "$Yellow" "Running clean recursively...\n"
+
+run() {
+	cd ${1%/*}
+	local prepper="$(echo $1 | sed 's/\//\\\//g')"
+	output="$(bash ${1##*/})"
+	code="$?"
+	if [ "${#output}" -gt 0 ]; then
+		errs "$Cyan" "$(echo "$output" |& sed "s/^/$prepper: /g")\n"
+	fi
+	if [ "$code" -ne 0 ]; then
+		return 1
+	fi
+}
+
+fail=0
+while read -r -d $'\0' clean; do
+	root="$(pwd)"
+	errs "$Yellow" "running '$clean'\n"
+	if run "$clean"; then
+		errs "$Green" "Cleaning script '$clean' succeeded\n"
+	else
+		errs "$Red" "Cleaning script '$clean' failed\n"
+		: $((++fail))
+	fi
+	cd "$root"
+done < <(find -name clean -perm -u=x -type f -print0)
+
+if [ "$fail" -ge 1 ]; then
+	wording=('scripts' 'these')
+	if [ "$fail" -eq 1 ]; then
+		wording=('script' 'it')
+	fi
+	errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+fi
