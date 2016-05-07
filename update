@@ -12,18 +12,23 @@
 #
 #######################################################################
 
+logs() { printf "$2"; }
+errs() { logs "$@" >&2; }
+
 depend() {
+	local lacking=0
 	for com in "$@"; do
-		command -v "$com" >/dev/null 2>&1 || {
-			printf '%s' "This script requires "$com", but it's not installed." >&2
-			if ! [ -t 1 ]; then
-				printf 'Aborting.\n'
-				exit 1
-			else
-				printf '\n'
-			fi
-		}
+		if command -v "$com" >/dev/null 2>&1; then
+			logs "$Green" "Found program $com\n"
+		else
+			lacking=1
+			errs "$Red" "This script requires ""$com"", but it's not installed.\n"
+		fi
 	done
+	if [ "$lacking" -eq 1 ]; then
+		errs "$Red" 'Aborting.\n'
+		exit 1
+	fi
 }
 
 #######################################################################
@@ -38,9 +43,9 @@ fi
 
 logs() {
 	if [ "$colors" -eq 1 ]; then
-		printf "$(printf '%s' ""$2"" | sed ""s/^/$1/g"" | sed ""s/\$/${Color_Off}/g"")"
+		printf "$(printf '%s' "$2" | sed "s/^/$1/g" | sed "s/\$/${Color_Off}/g")"
 	else
-		printf "$(printf '%s' ""$2"")"
+		printf "$(printf '%s' "$2")"
 	fi
 }
 errs() { logs "$@" >&2; }
