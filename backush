@@ -14,7 +14,7 @@
 
 version() {
 	cat <<EOF
-backush (BacKush) version 0.3.1
+backush (BacKush) version 0.3.2
 Copyright (C) 2016 Kevin Robert Stravers
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
@@ -282,6 +282,10 @@ EOF
 EOF
 )
 
+	aconf() {
+		awk -v pattern="$1" '$1 ~ pattern { for (i = 2; i <= NF; ++i) print $i;  }' | tr $'\n' ' ' | sed 's/ *$//g;s/^ *//g'
+	}
+
 	errs "$Yellow" "Setting up server escaper\n"
 
 	errs "$Yellow" "Processing the backup-servers\n"
@@ -392,6 +396,16 @@ EOF
 		fi
 	}
 
+	get_elements() {
+		address="$(echo "$1" | aconf '^[^\\.]+\\.address$')"
+		push="$(echo "$1" | aconf '^[^\\.]+\\.push$')"
+		pull="$(echo "$1" | aconf '^[^\\.]+\\.pull$')"
+		path="$(echo "$1" | aconf '^[^\\.]+\\.path$')"
+		from="$(echo "$1" | aconf '^[^\\.]+\\.from$')"
+		execute="$(echo "$1" | aconf '^[^\\.]+\\.execute$')"
+		execute_flags="$(echo "$1" | aconf '^[^\\.]+\\.execute_flags')"
+	}
+
 	upload() {
 		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
 		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="^$server\$" '$1 ~ pattern { print; }')"
@@ -399,18 +413,13 @@ EOF
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
 		fi
-		local address="$(get_entry "$value" "address")"
-		local push="$(get_entry "$value" "push")"
-		local path="$(get_entry "$value" "path")"
-		local from="$(get_entry "$value" "from")"
-		local execute="$(get_entry "$value" "execute")"
+		get_elements "$value"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'\n"
 		read -r -a array <<< "$push"
 		escape_all
 		rsync "${new_array[@]}" $from "$address:$path"
 		if [ "$execute" != "" ]; then
-			local execute_flags="$(get_entry "$value" "execute_flags")"
 			ssh $execute_flags "$address" <<< "$execute"
 		fi
 	}
@@ -422,11 +431,7 @@ EOF
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
 		fi
-		local address="$(get_entry "$value" "address")"
-		local pull="$(get_entry "$value" "pull")"
-		local path="$(get_entry "$value" "path")"
-		local from="$(get_entry "$value" "from")"
-		local execute="$(get_entry "$value" "execute")"
+		get_elements "$value"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'\n"
 		read -r -a array <<< "$pull"
