@@ -273,7 +273,7 @@ fi
 #######################################################################
 # 4. Call 'clean' recursively
 #######################################################################
-if ! onearg "$1" "--contamine"; then
+if ! onearg "$1" "--contamine" && ! onearg "$1" "--pull"; then
 
 	errs "$Yellow" "Running clean recursively...\n"
 
@@ -356,22 +356,46 @@ EOF
 		value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
 		address="$(get_entry "$value" "address")"
 		push="$(get_entry "$value" "push")"
-		pull="$(get_entry "$value" "pull")"
 		path="$(get_entry "$value" "path")"
 		from="$(get_entry "$value" "from")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		rsync -av $push $from "$address:$path"
 	}
 
-	errs "$Yellow" "Processing servers\n"
-	if [ "${#servers[@]}" -eq 0 ]; then
-		for server in "${raw_list[@]}"; do
-			upload "$server"
-		done
+	download() {
+		server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
+		value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		address="$(get_entry "$value" "address")"
+		pull="$(get_entry "$value" "pull")"
+		path="$(get_entry "$value" "path")"
+		from="$(get_entry "$value" "from")"
+		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
+		rsync -av $pull "$address:$path" .
+	}
+
+	if ! onearg "$1" "--pull"; then
+		errs "$Yellow" "Uploading...\n"
+		if [ "${#servers[@]}" -eq 0 ]; then
+			for server in "${raw_list[@]}"; do
+				upload "$server"
+			done
+		else
+			for server in "${servers[@]}"; do
+				upload "$server"
+			done
+		fi
 	else
-		for server in "${servers[@]}"; do
-			upload "$server"
-		done
+		errs "$Yellow" "Downloading...\n"
+		if [ "${#servers[@]}" -eq 0 ]; then
+			for server in "${raw_list[@]}"; do
+				download "$server"
+			done
+		else
+			for server in "${servers[@]}"; do
+				download "$server"
+			done
+		fi
+
 	fi
 
 fi
@@ -379,7 +403,7 @@ fi
 #######################################################################
 # 7. Run 'contamine' recursively
 #######################################################################
-if ! onearg "$1" "--clean"; then
+if onearg "$1" "--pull" || onearg "$1" "--contamine"; then
 
 	fail=0
 	while read -r -d $'\0' clean; do
