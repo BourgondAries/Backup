@@ -390,7 +390,6 @@ EOF
 		local execute="$(get_entry "$value" "execute")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'\n"
-		exit
 		rsync $push $from "$address:$path"
 		if [ "$execute" != "" ]; then
 			ssh "$address" <<< "$execute"
