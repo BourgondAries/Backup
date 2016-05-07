@@ -43,6 +43,8 @@ Usage:
 		Show this message.
 	$program --check
 		Only check if all necessary dependencies are installed.
+	$program --acon
+		Extract the ACON snippets and generate an ACON parser.
 EOF
 }
 
@@ -214,6 +216,25 @@ if [ "$1" = "--check" ]; then
 	exit
 fi
 
+if [ "$1" = "--acon" ]; then
+	selfing() {
+		cat "${BASH_SOURCE[0]}" | awk '
+			BEGIN { inside = 0; }
+			/^## BEGIN '"$1"'$/ { inside = 1; next; }
+			/^## END '"$1"'$/ { exit; }
+			{ if (inside == 1) print; }
+		' | sed 's/\t//g'
+	}
+	echo "#! /usr/bin/awk -f" > acon.awk
+	selfing ACON | sed 's/\\\$/$/g' >> acon.awk
+	errs "$Green" 'Extracted acon.awk\n'
+
+	echo "#! /bin/bash" > aconf
+	selfing ACONF >> aconf
+	errs "$Green" 'Extracted aconf\n'
+	exit
+fi
+
 errs "$Yellow" "Setting kill condition\n"
 # trap "trap - SIGTERM && kill -- -$$" SIGINT SIGTERM EXIT
 
@@ -285,7 +306,7 @@ EOF
 	aconf() {
 ## BEGIN ACONF
 		awk -v pattern="$1" '$1 ~ pattern { for (i = 2; i <= NF; ++i) print $i;  }' | tr $'\n' ' ' | sed 's/ *$//g;s/^ *//g'
-##  END ACONF
+## END ACONF
 	}
 
 	errs "$Yellow" "Setting up server escaper\n"
