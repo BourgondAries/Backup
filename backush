@@ -14,7 +14,7 @@
 
 version() {
 	cat <<EOF
-backush (BacKush) version 0.1.0-draft
+backush (BacKush) version 0.1.0
 Copyright (C) 2016 Kevin Robert Stravers
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
@@ -27,10 +27,12 @@ usage() {
 	local program=update
 	cat <<EOF
 Usage:
-	$program [ --push ] [ server1 server2 ... ]
-		Push to one or more servers.
+	$program
+		Start interactive mode in push.
+	$program --push [ server1 server2 ... ]
+		Push to one or more servers. If no servers are provided, interactive mode.
 	$program --pull [ server1 server2 ... ]
-		Pull from one or more servers.
+		Pull from one or more servers. If no servers are provided, interactive mode.
 	$program --clean
 		Only run 'clean' scripts found from the current directory.
 	$program --contamine
