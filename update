@@ -72,8 +72,8 @@ depend() {  # Check dependencies
 run() {  # Run a script in its native folder
 	cd ${1%/*}
 	local prepper="$(echo $1 | sed 's/\//\\\//g')"
-	output="$(bash ${1##*/})"
-	code="$?"
+	local output="$(bash ${1##*/})"
+	local code="$?"
 	if [ "${#output}" -gt 0 ]; then
 		errs "$Cyan" "$(echo "$output" |& sed "s/^/$prepper: /g")\n"
 	fi
