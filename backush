@@ -63,7 +63,7 @@ if [ "$1" = "--push" ] || [ "$1" = "--pull" ] || [ "$1" = "--" ]; then
 fi
 
 #######################################################################
-# 0. Set functions 'logs', 'errs', 'depend', 'run', and 'onearg'
+# 0. Set functions 'logs', 'errs', 'depend', 'run', 'onearg', and 'escape'
 #######################################################################
 
 logs() { printf "$2"; }  # Log to stdout
@@ -104,6 +104,17 @@ onearg() {  # Compare two arguments
 	else
 		return 1
 	fi
+}
+
+escape() { sed 's/(32)/ /g' | sed 's/(10)/\\n/g'; }
+
+escape_all() {
+	local index=0
+	new_array=()
+	while [ "$index" -lt "${#array[@]}" ]; do
+		new_array+=("$(echo "${array[$index]}" | escape)")
+		: $((++index))
+	done
 }
 
 #######################################################################
@@ -268,7 +279,6 @@ EOF
 )
 
 	errs "$Yellow" "Setting up server escaper\n"
-	escape() { sed 's/(32)/ /g' | sed 's/(10)/\\n/g'; }
 
 	errs "$Yellow" "Processing the backup-servers\n"
 	servers="$(cat backup-servers | awk "$acon")"
@@ -373,7 +383,9 @@ EOF
 	get_entry() {
 		local line="$(echo "$1" | awk '{ printf "%s.%d\n", $1, NR; }' | \
 			awk -F '.' -v pattern="^$2\$" '$2 ~ pattern { print $3; }')"
-		echo "$1" | head -n "$line" | tail -n 1 | awk "$all_but_last" | tr $'\n' ' '
+		if [ "$line" != "" ]; then
+			echo "$1" | head -n "$line" | tail -n 1 | awk "$all_but_last" | tr $'\n' ' ' | sed 's/^ *//;s/ *$//'
+		fi
 	}
 
 	upload() {
@@ -390,7 +402,9 @@ EOF
 		local execute="$(get_entry "$value" "execute")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'\n"
-		rsync $push $from "$address:$path"
+		read -r -a array <<< "$push"
+		escape_all
+		rsync "${new_array[@]}" $from "$address:$path"
 		if [ "$execute" != "" ]; then
 			ssh "$address" <<< "$execute"
 		fi
@@ -410,7 +424,9 @@ EOF
 		local execute="$(get_entry "$value" "execute")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
 		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'\n"
-		rsync $pull "$address:$path" .
+		read -r -a array <<< "$pull"
+		escape_all
+		rsync "${new_array[@]}" "$address:$path" .
 		if [ "$execute" != "" ]; then
 			bash -c "$execute"
 		fi
