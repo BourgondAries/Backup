@@ -12,9 +12,39 @@
 ## 7. Run 'contamine' recursively
 #######################################################################
 
-cat <<EOF
-	Arguments will be here soon...
+version() {
+	echo "0.1.0-draft"
+}
+usage() {
+	version
+	local program=update
+	cat <<EOF
+Usage:
+	$program [ --push ] [ server1 server2 ... ]
+		Push to one or more servers.
+	$program --pull [ server1 server2 ... ]
+		Pull from one or more servers.
+	$program --clean
+		Only run 'clean' scripts found from the current directory.
+	$program --contamine
+		Only run 'contamine' scripts found from the current directory.
+	$program --version
+		Show the version.
+	$program --help
+		Show this message.
+	$program --check
+		Check if all necessary dependencies are installed.
 EOF
+}
+
+if [ "$1" = "--help" ]; then
+	usage
+	exit
+fi
+if [ "$1" = "--version" ]; then
+	version
+	exit
+fi
 
 #######################################################################
 # 0. Set functions 'logs', 'errs', 'depend', 'run', and 'onearg'
