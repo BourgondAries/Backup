@@ -152,15 +152,19 @@ else
 	address 192.168.1.1
 	push -P --delete --timeout=10
 	pull -P --delete --timeout=30
-	path folder1 folder2 item1 item2
+	path ./folder1
+	# Dot means everything
+	from .
 }
 { offsite-backup
 	address username@server
 	push -P --timeout=10
 	pull --timeout=10
-	path folder1 item1
+	path ./
+	from file1 folder1
 }
 EOF
+	exit 1
 fi
 
 errs "$Yellow" "Loading the ACON parser\n"
@@ -193,13 +197,21 @@ escape() { sed 's/(32)/ /g' | sed 's/(10)/\\n/g'; }
 errs "$Yellow" "Processing the backup-servers\n"
 servers="$(cat backup-servers | awk "$acon")"
 names="$(echo "$servers" | awk -F'.' '{ print $1; }' | uniq)"
+raw_list=()
 list=()
 while read line; do
-	list+=("$line")
+	list+=("$(echo $line | escape)")
+	raw_list+=("$line")
 	errs "$Green" "Loaded server '$(echo $line | escape)'\n"
 done < <(echo "$names")
 if [ "${#list[@]}" -eq 0 ]; then
 	errs "$Red" "Server list is empty. Delete the backup-servers file to let this script generate one for you. Aborting\n"
+	exit 1
+fi
+
+errs "$Yellow" 'Checking internal consistency\n'
+if [ "${#list[@]}" -ne "${#raw_list[@]}" ]; then
+	errs "$Red" 'Internal Error: The escaped list and names are not of the same size.\n'
 	exit 1
 fi
 
