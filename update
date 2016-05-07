@@ -3,7 +3,7 @@
 #######################################################################
 #
 # What this script does:
-# 0. Set pretty printing (dependent on tty)
+# 0. Set pretty printing (dependent on tty) (Also check necessary utils)
 # 1. Check whether all necessary tools are available
 # 2. Check and load the server list
 # 3. Call 'clean' recursively from the current working directory
@@ -12,12 +12,27 @@
 #
 #######################################################################
 
+depend() {
+	for com in "$@"; do
+		command -v "$com" >/dev/null 2>&1 || {
+			printf '%s' "This script requires "$com", but it's not installed." >&2
+			if ! [ -t 1 ]; then
+				printf 'Aborting.\n'
+				exit 1
+			else
+				printf '\n'
+			fi
+		}
+	done
+}
 
 #######################################################################
 # COLORS
 #######################################################################
+depend printf sed tput
+
 colors=0
-if test -t 1 ; then
+if test -t 1 && [ "$(tput colors)" -ge 8 ]; then
 	colors=1
 fi
 
