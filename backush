@@ -244,6 +244,7 @@ EOF
 	errs "$Yellow" "Loading the ACON parser\n"
 
 	acon=$(cat <<EOF
+## START ACON
 	BEGIN { paths = 0; lists = 0; }
 	function printElements(start) { for (i = start; i <= NF; ++i) printf " %s", \$i; }
 	function isInArray() { return lists > 0 && topList() == paths; }
@@ -262,6 +263,7 @@ EOF
 	\$1 ~ /\[/ { pushPath(\$2); pushPath(0); pushList(paths); next; }
 	\$1 ~ /\]/ { popPath(); popPath(); popList(); incrementIfInList(); next; }
 	// { if (NF == 0) { if (isInArray()) { printPath(); incrementIfInList(); printf "\n";} next; } else { printPath(); printUnitTitle(); printElements((isInArray() == 0) + 1); printf "\n"; incrementIfInList(); } }
+## END ACON
 EOF
 )
 
@@ -369,12 +371,14 @@ EOF
 )"
 
 	get_entry() {
-		echo "$1" | awk -F'[. ]' "\$2 ~ /$2/ { print; }" | awk "$all_but_last" | tr $'\n' ' ' | sed 's/ *$//g'
+		local line="$(echo "$1" | awk '{ printf "%s.%d\n", $1, NR; }' | \
+			awk -F '.' -v pattern="^$2\$" '$2 ~ pattern { print $3; }')"
+		echo "$1" | head -n "$line" | tail -n 1 | awk "$all_but_last" | tr $'\n' ' '
 	}
 
 	upload() {
 		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
-		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="^$server\$" '$1 ~ pattern { print; }')"
 		if [ "$value" = "" ]; then
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
@@ -385,7 +389,8 @@ EOF
 		local from="$(get_entry "$value" "from")"
 		local execute="$(get_entry "$value" "execute")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
-		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
+		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'\n"
+		exit
 		rsync $push $from "$address:$path"
 		if [ "$execute" != "" ]; then
 			ssh "$address" <<< "$execute"
@@ -394,7 +399,7 @@ EOF
 
 	download() {
 		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
-		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="$server" '$1 ~ pattern { print; }')"
+		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="^$server\$" '$1 ~ pattern { print; }')"
 		if [ "$value" = "" ]; then
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
@@ -405,7 +410,7 @@ EOF
 		local from="$(get_entry "$value" "from")"
 		local execute="$(get_entry "$value" "execute")"
 		errs "$Yellow" "Starting upload from '$from' to $address:$path\n"
-		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'"
+		errs "$Yellow" "Command: 'rsync $push $from ""$address:$path'\n"
 		rsync $pull "$address:$path" .
 		if [ "$execute" != "" ]; then
 			bash -c "$execute"
