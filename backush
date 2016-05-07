@@ -14,7 +14,7 @@
 
 version() {
 	cat <<EOF
-backush (BacKush) version 0.2.1
+backush (BacKush) version 0.3.0
 Copyright (C) 2016 Kevin Robert Stravers
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
@@ -225,29 +225,32 @@ if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
 	else
 		errs "$Red" "$(pwd)/backup-servers does not exist! Creating an example\n"
 		cat <<EOF > backup-servers
-	# Example backup server file
-	# The address is provided to rsync
-	# The push and pull variables denote what happens when you either push or pull
-	# All of these are rsync flags
-	# path specifies which directories and/or files to up/down -load
-	# A star can be used here to denote every file
-	# All paths are from the current working directory, but can also be absolute
+# Example backup server file
+# The address is provided to rsync and ssh (where the server is)
+# The push and pull variables denote what happens when you either push or pull
+# All of these are rsync flags, escape spaces using (32)
+# path specifies which directories and/or files to up/down -load
+# A star can be used here to denote every file
+# All paths are from the current working directory, but can also be absolute
 
-	{ onside-backup
-		address 192.168.1.1
-		push -P --delete --timeout=10
-		pull -P --delete --timeout=30
-		path ./folder1
-		# Dot means everything
-		from .
-	}
-	{ offsite-backup
-		address username@server
-		push -P --timeout=10
-		pull --timeout=10
-		path ./
-		from file1 folder1
-	}
+# Minimal example
+{ offsite-backup
+	address username@server
+	push -P --timeout=10
+	path ./stuf/
+	from file1 folder1
+}
+
+# With SSH-execution after backup
+{ onsite-backup
+	address 192.168.1.1
+	push --rsh=ssh(32)-p55555 -P --delete --timeout=10
+	pull --rsh=ssh(32)-p55555 -P --delete --timeout=30
+	path ./folder1/
+	from .
+	execute date >> backup_date
+	execute_flags -p 55555
+}
 EOF
 		exit 1
 	fi
@@ -406,7 +409,8 @@ EOF
 		escape_all
 		rsync "${new_array[@]}" $from "$address:$path"
 		if [ "$execute" != "" ]; then
-			ssh "$address" <<< "$execute"
+			local execute_flags="$(get_entry "$value" "execute_flags")"
+			ssh $execute_flags "$address" <<< "$execute"
 		fi
 	}
 
