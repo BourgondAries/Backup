@@ -3,11 +3,11 @@
 #######################################################################
 #
 # What this script does:
-# 0. Set pretty printing (dependent on tty) (Also check necessary utils)
-# 1. Check whether all necessary tools are available
-# 2. Check and load the server list
-# 3. Call 'clean' recursively from the current working directory
-# 4. Query which servers to use
+# 0. Set pretty printing (dependent on tty) (Also check necessary utils) - COLORS
+# 1. Check whether all necessary tools are available - TOOLCHECK
+# 2. Check and load the server list - SERVER LIST
+# 3. Call 'clean' recursively from the current working directory - CLEAN
+# 4. Query which servers to use - QUERY
 # 5. Upload/download
 #
 #######################################################################
