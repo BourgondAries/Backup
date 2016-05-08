@@ -14,7 +14,7 @@
 
 version() {
 	cat <<EOF
-backush (BacKush) version 0.5.2
+backush (BacKush) version 0.5.3
 Copyright (C) 2016 Kevin Robert Stravers
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
@@ -475,30 +475,61 @@ EOF
 		fi
 	}
 
+	fail=0
 	if ! onearg "$1" "--pull"; then
 		errs "$Yellow" "Uploading...\n"
 		if [ "${#servers[@]}" -eq 0 ]; then
 			for server in "${raw_list[@]}"; do
+				set +e
 				upload "$server"
+				if [ "$?" -ne 0 ]; then
+					$((fail+=1))
+				fi
+				set -e
 			done
 		else
 			for server in "${servers[@]}"; do
+				set +e
 				upload "$server"
+				if [ "$?" -ne 0 ]; then
+					$((fail+=1))
+				fi
+				set -e
 			done
 		fi
 	else
 		errs "$Yellow" "Downloading...\n"
 		if [ "${#servers[@]}" -eq 0 ]; then
 			for server in "${raw_list[@]}"; do
+				set +e
 				download "$server"
+				if [ "$?" -ne 0 ]; then
+					$((fail+=1))
+				fi
+				set -e
 			done
 		else
 			for server in "${servers[@]}"; do
+				set +e
 				download "$server"
+				if [ "$?" -ne 0 ]; then
+					$((fail+=1))
+				fi
+				set -e
 			done
 		fi
-
 	fi
+
+	if [ "$fail" -ge 1 ]; then
+		wording=('scripts' 'these')
+		if [ "$fail" -eq 1 ]; then
+			wording=('script' 'it')
+		fi
+		errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+	else
+		errs "$BIGreen" "All uploads succeeded\n"
+	fi
+
 
 fi
 
