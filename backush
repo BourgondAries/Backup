@@ -14,7 +14,7 @@
 
 version() {
 	cat <<EOF
-backush (BacKush) version 0.5.0
+backush (BacKush) version 0.5.1
 Copyright (C) 2016 Kevin Robert Stravers
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 This is free software: you are free to change and redistribute it.
@@ -88,13 +88,13 @@ depend() {  # Check dependencies
 }
 
 run() {  # Run a script in its native folder
-	cd ${1%/*}
+	cd "${1%/*}"
 	local prepper="$(echo $1 | sed 's/\//\\\//g')"
-	local output="$(bash "${1##*/}")" RET="$?"
+	printf "$Blue"
+	./"${1##*/}" 3>&1 2>&1 |& sed "s/^/$prepper: /g"
+	RET="${PIPESTATUS[0]}"
+	printf "$Color_Off"
 	local code="$RET"
-	if [ "${#output}" -gt 0 ]; then
-		errs "$Cyan" "$(echo "$output" |& sed "s/^/$prepper: /g")\n"
-	fi
 	if [ "$code" -ne 0 ]; then
 		return 1
 	fi
