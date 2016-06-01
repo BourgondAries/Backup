@@ -456,7 +456,7 @@ EOF
 		escape_all
 		rsync "${new_array[@]}" $from "$address:$path"
 		if [ "$execute" != "" ]; then
-			ssh $execute_flags "$address" <<< "$execute"
+			ssh -o StrictHostKeyChecking=no $execute_flags "$address" <<< "$execute"
 		fi
 	}
 
