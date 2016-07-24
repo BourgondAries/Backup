@@ -1,4 +1,4 @@
-#! /bin/bash -e
+#! /usr/bin/env bash
 
 #######################################################################
 ## What this program does:
@@ -11,6 +11,7 @@
 ## 6. Perform actual up/down -loading
 ## 7. Run 'contamine' recursively
 #######################################################################
+set -e
 
 version() {
 	cat <<EOF
@@ -373,6 +374,7 @@ if ! onearg "$1" "--contamine" && ! onearg "$1" "--pull"; then
 			wording=('script' 'it')
 		fi
 		errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+		exit 1
 	fi
 
 fi
@@ -529,6 +531,7 @@ EOF
 			wording=('script' 'it')
 		fi
 		errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+		exit 1
 	else
 		errs "$BIGreen" "All uploads succeeded\n"
 	fi
@@ -560,6 +563,7 @@ if onearg "$1" "--pull" || onearg "$1" "--contamine"; then
 			wording=('script' 'it')
 		fi
 		errs "$BIPurple" "$fail ${wording[0]} failed to return succesfully. Please check ${wording[1]} and run again.\n"
+		exit 1
 	fi
 
 fi
