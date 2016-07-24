@@ -33,6 +33,8 @@ Before `./backush --push` uploads, it calls `clean` recursively. Usage: encrypti
 
 Perform cleaning without uploading with `./backush --clean`
 
+If any clean script fails, the upload will not commence.
+
 ## Contaminating ##
 
 After `./backush --pull` downloads, it calls `contamine` recursively. Usage: decrypt files, extract files, create temporaries.
