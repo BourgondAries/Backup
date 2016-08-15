@@ -253,11 +253,11 @@ fi
 # 3. Process server list into an array
 #######################################################################
 if ! onearg "$1" "--clean" && ! onearg "$1" "--contamine"; then
-	if [ -f backup-servers ]; then
-		errs "$Green" "Located backup server list at $(pwd)/backup-servers\n"
+	if [ -f servers ]; then
+		errs "$Green" "Located backup server list at $(pwd)/servers\n"
 	else
-		errs "$Red" "$(pwd)/backup-servers does not exist! Creating an example\n"
-		cat <<EOF > backup-servers
+		errs "$Red" "$(pwd)/servers does not exist! Creating an example\n"
+		cat <<EOF > servers
 # Example backup server file
 # The address is provided to rsync and ssh (where the server is)
 # The push and pull variables denote what happens when you either push or pull
@@ -325,8 +325,8 @@ EOF
 
 	errs "$Yellow" "Setting up server escaper\n"
 
-	errs "$Yellow" "Processing the backup-servers\n"
-	servers="$(cat backup-servers | awk "$acon")"
+	errs "$Yellow" "Processing the servers\n"
+	servers="$(cat servers | awk "$acon")"
 	names="$(echo "$servers" | awk -F'.' '{ print $1; }' | uniq)"
 	raw_list=()
 	list=()
@@ -336,7 +336,7 @@ EOF
 		errs "$Green" "Loaded server '$(echo $line | escape)'\n"
 	done < <(echo "$names")
 	if [ "${#list[@]}" -eq 0 ]; then
-		errs "$Red" "Server list is empty. Delete the backup-servers file to let this script generate one for you. Aborting\n"
+		errs "$Red" "Server list is empty. Delete the servers file to let this script generate one for you. Aborting\n"
 		exit 1
 	fi
 
@@ -446,7 +446,7 @@ EOF
 
 	upload() {
 		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
-		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="^$server\$" '$1 ~ pattern { print; }')"
+		local value="$(cat servers | awk "$acon" | awk -F'.' -v pattern="^$server\$" '$1 ~ pattern { print; }')"
 		if [ "$value" = "" ]; then
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
@@ -464,7 +464,7 @@ EOF
 
 	download() {
 		local server="$(echo "$1" | sed 's/(/\\\\(/g' | sed 's/)/\\\\)/g')"
-		local value="$(cat backup-servers | awk "$acon" | awk -F'.' -v pattern="^$server\$" '$1 ~ pattern { print; }')"
+		local value="$(cat servers | awk "$acon" | awk -F'.' -v pattern="^$server\$" '$1 ~ pattern { print; }')"
 		if [ "$value" = "" ]; then
 			errs "$Red" "Server '$server' not found. Aborting\n"
 			exit 1
