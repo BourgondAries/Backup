@@ -488,7 +488,7 @@ EOF
 				set +e
 				upload "$server"
 				if [ "$?" -ne 0 ]; then
-					$((fail+=1))
+					: $((fail+=1))
 				fi
 				set -e
 			done
@@ -497,7 +497,7 @@ EOF
 				set +e
 				upload "$server"
 				if [ "$?" -ne 0 ]; then
-					$((fail+=1))
+					: $((fail+=1))
 				fi
 				set -e
 			done
@@ -509,7 +509,7 @@ EOF
 				set +e
 				download "$server"
 				if [ "$?" -ne 0 ]; then
-					$((fail+=1))
+					: $((fail+=1))
 				fi
 				set -e
 			done
@@ -518,7 +518,7 @@ EOF
 				set +e
 				download "$server"
 				if [ "$?" -ne 0 ]; then
-					$((fail+=1))
+					: $((fail+=1))
 				fi
 				set -e
 			done
